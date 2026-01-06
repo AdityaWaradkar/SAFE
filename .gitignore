@@ -1,0 +1,47 @@
+# =========================
+# Node.js
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Vite / Frontend builds
+# =========================
+dist/
+.vite/
+
+# =========================
+# Backend runtime files
+# =========================
+coverage/
+.tmp/
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+
+# =========================
+# OS / Editor files
+# =========================
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+!.vscode/extensions.json
+
+# =========================
+# Git
+# =========================
+.gitmodules
