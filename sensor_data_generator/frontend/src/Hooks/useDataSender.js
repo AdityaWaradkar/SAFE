@@ -1,14 +1,13 @@
 import { useEffect, useRef } from "react";
 
 const SEND_INTERVAL = 5000;
+const ENDPOINT = "https://safe-0vvn.onrender.com/data";
 
 export default function useDataSender(activeRegion, regionValues) {
   const latestRef = useRef({
     activeRegion,
     regionValues,
   });
-
-  const endpoint = import.meta.env.VITE_BACKEND_URL;
 
   useEffect(() => {
     latestRef.current = {
@@ -18,8 +17,6 @@ export default function useDataSender(activeRegion, regionValues) {
   }, [activeRegion, regionValues]);
 
   useEffect(() => {
-    if (!endpoint) return;
-
     const interval = setInterval(() => {
       const { activeRegion, regionValues } = latestRef.current;
 
@@ -38,15 +35,17 @@ export default function useDataSender(activeRegion, regionValues) {
         ),
       };
 
-      fetch(endpoint, {
+      fetch(ENDPOINT, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
-      }).catch(() => {});
+      }).catch((err) => {
+        console.error("Data send failed:", err);
+      });
     }, SEND_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [endpoint]);
+  }, []);
 }
