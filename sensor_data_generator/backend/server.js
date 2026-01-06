@@ -3,40 +3,65 @@ import cors from "cors";
 
 const app = express();
 
+// Server configuration
 const PORT = process.env.PORT || 3000;
-const FRONTEND_URL = "https://safe-rho-ivory.vercel.app";
 
-let latestSnapshot = null;
+// Allowed frontend origins
+const ALLOWED_ORIGINS = [
+  "https://safe-rho-ivory.vercel.app",
+  "http://localhost:5173",
+];
 
+// In-memory store for latest region snapshots
+const regionSnapshots = {};
+
+// Enable CORS
 app.use(
   cors({
-    origin: FRONTEND_URL,
+    origin: ALLOWED_ORIGINS,
     methods: ["GET", "POST"],
   })
 );
 
+// Parse JSON bodies
 app.use(express.json());
 
-app.post("/data", (req, res) => {
-  latestSnapshot = req.body;
-  console.log(JSON.stringify(req.body, null, 2));
+// Store data for a specific region
+app.post("/data/:region", (req, res) => {
+  const { region } = req.params;
+
+  // Validate payload
+  if (!req.body || Object.keys(req.body).length === 0) {
+    return res.status(400).json({ error: "Invalid payload" });
+  }
+
+  regionSnapshots[region] = {
+    ...req.body,
+    receivedAt: new Date().toISOString(),
+  };
+
   res.status(200).json({ success: true });
 });
 
-app.get("/data", (req, res) => {
-  if (!latestSnapshot) {
+// Fetch latest data for a specific region
+app.get("/data/:region", (req, res) => {
+  const { region } = req.params;
+
+  if (!regionSnapshots[region]) {
     return res.status(200).json({
-      message: "No data received yet",
+      message: `No data received yet for ${region}`,
     });
   }
 
-  res.status(200).json(latestSnapshot);
+  res.status(200).json(regionSnapshots[region]);
 });
 
-app.get("/health", (req, res) => {
+// Health check endpoint
+app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
+// Start HTTP server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
