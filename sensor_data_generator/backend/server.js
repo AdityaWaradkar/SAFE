@@ -4,13 +4,13 @@ import cors from "cors";
 const app = express();
 
 const PORT = process.env.PORT || 3000;
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
+const FRONTEND_URL = "https://safe-rho-ivory.vercel.app";
 
 let latestSnapshot = null;
 
 app.use(
   cors({
-    origin: FRONTEND_ORIGIN,
+    origin: FRONTEND_URL,
     methods: ["GET", "POST"],
   })
 );
