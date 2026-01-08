@@ -1,73 +1,119 @@
-import React, { useState, useCallback } from "react";
+import { useState } from "react";
 import Button from "./Components/Button";
 import Slider from "./Components/Slider";
 import useDataSender from "./Hooks/useDataSender";
 
-// Supported system regions
-const REGIONS = ["r1", "r2", "r3", "r4", "c1", "c2"];
+const DEFAULT_VALUES = [50, 50, 70.0];
 
-// Default sensor values per region
-const DEFAULT_VALUES = [50, 50, 70];
+const ROOMS = ["room1", "room2", "room3", "room4", "room5", "safeRoom"];
+const CORRIDORS = [
+  "corridor1",
+  "corridor2",
+  "corridor3",
+  "corridor4",
+  "corridor5",
+  "corridor6",
+];
+
+const INITIAL_STATE = {
+  rooms: Object.fromEntries(ROOMS.map((r) => [r, [...DEFAULT_VALUES]])),
+  corridors: Object.fromEntries(CORRIDORS.map((c) => [c, [...DEFAULT_VALUES]])),
+  conferenceRoom: {
+    A: [...DEFAULT_VALUES],
+    B: [...DEFAULT_VALUES],
+  },
+};
 
 export default function App() {
-  // Track currently selected region for UI interaction
-  const [activeRegion, setActiveRegion] = useState("r1");
+  const [section, setSection] = useState("rooms");
+  const [activeEntity, setActiveEntity] = useState("room1");
+  const [state, setState] = useState(INITIAL_STATE);
 
-  // Maintain independent values for each region
-  const [regionValues, setRegionValues] = useState(() =>
-    Object.fromEntries(REGIONS.map((r) => [r, [...DEFAULT_VALUES]]))
-  );
+  const currentValues =
+    section === "conferenceRoom"
+      ? state.conferenceRoom[activeEntity]
+      : state[section][activeEntity];
 
-  // Update slider values for the active region
-  const handleSliderChange = useCallback(
-    (index, value) => {
-      setRegionValues((prev) => ({
-        ...prev,
-        [activeRegion]: prev[activeRegion].map((v, i) =>
-          i === index ? value : v
-        ),
-      }));
-    },
-    [activeRegion]
-  );
+  const handleSliderChange = (index, value) => {
+    setState((prev) => {
+      const next = structuredClone(prev);
 
-  // Send all region data periodically
-  useDataSender(regionValues);
+      if (section === "conferenceRoom") {
+        next.conferenceRoom[activeEntity][index] = value;
+      } else {
+        next[section][activeEntity][index] = value;
+      }
+
+      return next;
+    });
+  };
+
+  useDataSender(state);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="max-w-3xl mx-auto px-4 py-12 space-y-6">
-        {/* Application header */}
+      <div className="max-w-4xl mx-auto px-4 py-10 space-y-6">
+        {/* Header */}
         <header>
-          <h1 className="text-3xl font-extrabold mb-2">
+          <h1 className="text-3xl font-extrabold mb-1">
             System Control Interface
           </h1>
           <p className="text-slate-500">
-            Configure regional sensor parameters.
+            Real-time control and monitoring of system zones.
           </p>
         </header>
 
-        {/* Region selector */}
+        {/* Section Selector */}
         <Button
-          regions={REGIONS}
-          activeRegion={activeRegion}
-          onSelect={setActiveRegion}
+          title="Sections"
+          items={["rooms", "corridors", "conferenceRoom"]}
+          active={section}
+          onSelect={(value) => {
+            setSection(value);
+            if (value === "rooms") setActiveEntity("room1");
+            if (value === "corridors") setActiveEntity("corridor1");
+            if (value === "conferenceRoom") setActiveEntity("A");
+          }}
         />
 
-        {/* Parameter sliders */}
-        <Slider
-          values={regionValues[activeRegion]}
-          onChange={handleSliderChange}
-          scopeId={activeRegion}
-        />
+        {/* Entity Selector */}
+        {section === "rooms" && (
+          <Button
+            title="Rooms"
+            items={ROOMS}
+            active={activeEntity}
+            onSelect={setActiveEntity}
+          />
+        )}
 
-        {/* System status */}
+        {section === "corridors" && (
+          <Button
+            title="Corridors"
+            items={CORRIDORS}
+            active={activeEntity}
+            onSelect={setActiveEntity}
+          />
+        )}
+
+        {section === "conferenceRoom" && (
+          <Button
+            title="Conference Room Channels"
+            items={["A", "B"]}
+            active={activeEntity}
+            onSelect={setActiveEntity}
+          />
+        )}
+
+        {/* Sliders */}
+        <Slider values={currentValues} onChange={handleSliderChange} />
+
+        {/* Status */}
         <footer className="flex justify-between text-sm text-slate-400 pt-4 border-t">
           <span className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
             System Active
           </span>
-          <span>Syncing every 5s</span>
+          <span>Publishing every 5 seconds</span>
         </footer>
       </div>
     </div>
