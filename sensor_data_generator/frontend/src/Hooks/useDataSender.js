@@ -2,11 +2,9 @@ import { useEffect, useRef } from "react";
 
 const INTERVAL = 5000;
 
-// Backend endpoints (both include /data)
 const PROD_BASE = "https://safe-0vvn.onrender.com/data";
 const LOCAL_BASE = "http://localhost:3000/data";
 
-// Auto-switch environment
 const BASE = window.location.hostname === "localhost" ? LOCAL_BASE : PROD_BASE;
 
 export default function useDataSender(state) {
@@ -21,24 +19,25 @@ export default function useDataSender(state) {
       const snapshot = ref.current;
       const timestamp = new Date().toISOString();
 
-      // Rooms → /data/room1, /data/room2, ...
-      Object.entries(snapshot.rooms).forEach(([id, values]) => {
-        send(`${BASE}/${id}`, timestamp, id, values);
+      // Rooms
+      send(`${BASE}/rooms`, {
+        timestamp,
+        rooms: mapValues(snapshot.rooms),
       });
 
-      // Corridors → /data/corridor1, /data/corridor2, ...
-      Object.entries(snapshot.corridors).forEach(([id, values]) => {
-        send(`${BASE}/${id}`, timestamp, id, values);
+      // Corridors
+      send(`${BASE}/corridors`, {
+        timestamp,
+        corridors: mapValues(snapshot.corridors),
       });
 
-      // Conference Room → /data/A, /data/B
-      ["A", "B"].forEach((channel) => {
-        send(
-          `${BASE}/${channel}`,
-          timestamp,
-          channel,
-          snapshot.conferenceRoom[channel]
-        );
+      // Conference Room
+      send(`${BASE}/conference`, {
+        timestamp,
+        conferenceRoom: {
+          A: toObject(snapshot.conferenceRoom.A),
+          B: toObject(snapshot.conferenceRoom.B),
+        },
       });
     }, INTERVAL);
 
@@ -46,19 +45,25 @@ export default function useDataSender(state) {
   }, []);
 }
 
-function send(url, timestamp, region, values) {
+function mapValues(group) {
+  return Object.fromEntries(
+    Object.entries(group).map(([key, values]) => [key, toObject(values)])
+  );
+}
+
+function toObject(values) {
+  return {
+    flame: values[0],
+    smoke: values[1],
+    temperature: values[2],
+  };
+}
+
+function send(url, payload) {
   fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      timestamp,
-      region,
-      data: {
-        flame: values[0],
-        smoke: values[1],
-        temperature: values[2],
-      },
-    }),
+    body: JSON.stringify(payload),
   }).catch((err) => {
     console.error("Send failed:", err);
   });

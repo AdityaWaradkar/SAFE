@@ -5,52 +5,47 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 /**
- * Explicitly allowed frontend origins
+ * Allowed frontend origins
  */
 const ALLOWED_ORIGINS = [
-  "https://safe-rho-ivory.vercel.app",
   "http://localhost:5173",
+  "https://safe-rho-ivory.vercel.app",
 ];
 
 /**
- * In-memory store for latest snapshots
- * Keyed by region identifier
- */
-const regionSnapshots = {};
-
-/**
- * CORS configuration
+ * CORS middleware (correct & stable)
  */
 app.use(
   cors({
     origin(origin, callback) {
-      // Allow server-to-server or curl requests (no origin)
+      // Allow non-browser requests (curl, health checks)
       if (!origin) return callback(null, true);
 
       if (ALLOWED_ORIGINS.includes(origin)) {
         return callback(null, true);
       }
 
-      return callback(new Error("CORS not allowed"));
+      return callback(new Error("Not allowed by CORS"));
     },
     methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type"],
   })
 );
 
 app.use(express.json());
 
 /**
- * Receive data for a specific region
- * Example: POST /data/rooms/room1
+ * In-memory snapshots
  */
-app.post("/data/:region", (req, res) => {
-  const { region } = req.params;
+let roomsSnapshot = null;
+let corridorsSnapshot = null;
+let conferenceSnapshot = null;
 
-  if (!req.body || typeof req.body !== "object") {
-    return res.status(400).json({ error: "Invalid payload" });
-  }
-
-  regionSnapshots[region] = {
+/**
+ * ROOMS
+ */
+app.post("/data/rooms", (req, res) => {
+  roomsSnapshot = {
     ...req.body,
     receivedAt: new Date().toISOString(),
   };
@@ -58,34 +53,61 @@ app.post("/data/:region", (req, res) => {
   res.status(200).json({ success: true });
 });
 
-/**
- * Fetch latest data for a specific region
- * Example: GET /data/rooms/room1
- */
-app.get("/data/:region", (req, res) => {
-  const { region } = req.params;
-
-  const snapshot = regionSnapshots[region];
-
-  if (!snapshot) {
-    return res.status(200).json({
-      message: `No data received yet for ${region}`,
-    });
+app.get("/data/rooms", (_req, res) => {
+  if (!roomsSnapshot) {
+    return res.json({ message: "No rooms data received yet" });
   }
 
-  res.status(200).json(snapshot);
+  res.json(roomsSnapshot);
 });
 
 /**
- * Health check endpoint
+ * CORRIDORS
+ */
+app.post("/data/corridors", (req, res) => {
+  corridorsSnapshot = {
+    ...req.body,
+    receivedAt: new Date().toISOString(),
+  };
+
+  res.status(200).json({ success: true });
+});
+
+app.get("/data/corridors", (_req, res) => {
+  if (!corridorsSnapshot) {
+    return res.json({ message: "No corridors data received yet" });
+  }
+
+  res.json(corridorsSnapshot);
+});
+
+/**
+ * CONFERENCE ROOM (A & B)
+ */
+app.post("/data/conference", (req, res) => {
+  conferenceSnapshot = {
+    ...req.body,
+    receivedAt: new Date().toISOString(),
+  };
+
+  res.status(200).json({ success: true });
+});
+
+app.get("/data/conference", (_req, res) => {
+  if (!conferenceSnapshot) {
+    return res.json({ message: "No conference data received yet" });
+  }
+
+  res.json(conferenceSnapshot);
+});
+
+/**
+ * Health check
  */
 app.get("/health", (_req, res) => {
-  res.status(200).json({ status: "ok" });
+  res.json({ status: "ok" });
 });
 
-/**
- * Start server
- */
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });
