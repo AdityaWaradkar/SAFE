@@ -23,7 +23,15 @@ const PARAMETERS = [
     unit: "°C",
     min: 20,
     max: 120,
-    step: 0.01, // 👈 float with 2 decimals
+    step: 0.01,
+  },
+  {
+    key: "people",
+    label: "People Count",
+    unit: "persons",
+    min: 0,
+    max: 20,
+    step: 1,
   },
 ];
 

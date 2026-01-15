@@ -5,7 +5,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 /**
- * Allowed frontend origins
+ * Allowed frontend origins (NO wildcards)
  */
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
@@ -13,21 +13,22 @@ const ALLOWED_ORIGINS = [
 ];
 
 /**
- * CORS middleware (correct & stable)
+ * CORS middleware (FIXED)
  */
 app.use(
   cors({
     origin(origin, callback) {
-      // Allow non-browser requests (curl, health checks)
+      // Allow non-browser clients (curl, server-to-server)
       if (!origin) return callback(null, true);
 
       if (ALLOWED_ORIGINS.includes(origin)) {
         return callback(null, true);
       }
 
-      return callback(new Error("Not allowed by CORS"));
+      // IMPORTANT: do NOT throw error → just deny
+      return callback(null, false);
     },
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["Content-Type"],
   })
 );
@@ -82,7 +83,7 @@ app.get("/data/corridors", (_req, res) => {
 });
 
 /**
- * CONFERENCE ROOM (A & B)
+ * CONFERENCE ROOM
  */
 app.post("/data/conference", (req, res) => {
   conferenceSnapshot = {

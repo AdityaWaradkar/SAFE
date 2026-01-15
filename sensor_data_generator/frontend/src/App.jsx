@@ -3,7 +3,8 @@ import Button from "./Components/Button";
 import Slider from "./Components/Slider";
 import useDataSender from "./Hooks/useDataSender";
 
-const DEFAULT_VALUES = [50, 50, 70.0];
+const DEFAULT_VALUES = [50, 50, 70.0, 12];
+
 
 const ROOMS = ["room1", "room2", "room3", "room4", "room5", "safeRoom"];
 const CORRIDORS = [
