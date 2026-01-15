@@ -1,0 +1,49 @@
+#include <Adafruit_NeoPixel.h>
+
+#define LED_PIN   D1
+#define LED_COUNT 32   // 1 buffer + 31 real LEDs
+
+// -------- Color definition --------
+#define COL_R 255
+#define COL_G 50
+#define COL_B 0
+
+// -------- Brightness limits --------
+#define BRIGHTNESS_MIN  0
+#define BRIGHTNESS_MAX  255
+
+// SAFE recommended range
+#define BRIGHTNESS_MIN_SAFE  10
+#define BRIGHTNESS_MAX_SAFE  150
+
+// -------- CONTROL VARIABLE --------
+// Change ONLY this value for testing
+uint8_t brightnessLevel = 90;  
+// Range: 0–255
+// SAFE range: 10–150
+
+Adafruit_NeoPixel strip(
+  LED_COUNT,
+  LED_PIN,
+  NEO_GRB + NEO_KHZ800
+);
+
+void setup() {
+  strip.begin();
+
+  strip.setBrightness(brightnessLevel);
+
+  // Buffer LED OFF
+  strip.setPixelColor(0, 0, 0, 0);
+
+  // Orange on all usable LEDs
+  for (int i = 1; i < LED_COUNT; i++) {
+    strip.setPixelColor(i, COL_R, COL_G, COL_B);
+  }
+
+  strip.show();
+}
+
+void loop() {
+  // Intentionally empty
+}
