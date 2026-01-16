@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-main: #020617;
+  --color-bg-card: #0f172a;
+}
+
+/* This tells Tailwind to use the .dark class for the dark variant */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  background-color: #f1f5f9;
+  color: #0f172a;
+  transition: background-color 0.3s ease;
+}
+
+:root.dark {
+  background-color: #020617;
+  color: #f8fafc;
+}
+
+/* Reset for safety */
+* {
+  border-color: var(--color-slate-200);
+}
+
+.dark * {
+  border-color: var(--color-slate-800);
+}
