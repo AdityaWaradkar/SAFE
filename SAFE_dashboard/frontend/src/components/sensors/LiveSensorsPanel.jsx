@@ -1,25 +1,25 @@
 import SensorCard from "./SensorCard";
 
+/**
+ * MOCK payload shaped exactly like backend JSON
+ */
+const sensorPayload = {
+  rooms: {
+    room1: { flame: 50, smoke: 44, temperature: 70, people_count: 6 },
+    room2: { flame: 80, smoke: 70, temperature: 92, people_count: 12 },
+    room3: { flame: 0, smoke: 30, temperature: 45, people_count: 4 },
+    room4: { flame: 0, smoke: 10, temperature: 26, people_count: 0 },
+  },
+};
+
 export default function LiveSensorsPanel({ emergency }) {
-  const rooms = emergency
-    ? [
-        { id: 1, name: "Room 1", status: "Dense Smoke", temp: 48, smoke: 65 },
-        { id: 2, name: "Room 2", status: "Fire Detected", temp: 92, smoke: 90 },
-        {
-          id: 3,
-          name: "Room 3",
-          status: "High Temperature",
-          temp: 55,
-          smoke: 20,
-        },
-        { id: 4, name: "Room 4", status: "Safe for Now", temp: 26, smoke: 5 },
-      ]
-    : [
-        { id: 1, name: "Room 1", status: "Safe for Now", temp: 22, smoke: 0 },
-        { id: 2, name: "Room 2", status: "Safe for Now", temp: 23, smoke: 0 },
-        { id: 3, name: "Room 3", status: "Safe for Now", temp: 21, smoke: 0 },
-        { id: 4, name: "Room 4", status: "Safe for Now", temp: 24, smoke: 0 },
-      ];
+  const rooms = Object.entries(sensorPayload.rooms).map(
+    ([key, data], index) => ({
+      id: index,
+      name: key.toUpperCase(),
+      ...data,
+    })
+  );
 
   return (
     <section className="space-y-4">
