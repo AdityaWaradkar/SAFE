@@ -3,7 +3,7 @@ import Button from "./Components/Button";
 import Slider from "./Components/Slider";
 import useDataSender from "./Hooks/useDataSender";
 
-const DEFAULT_VALUES = [50, 50, 70.0, 12];
+const DEFAULT_VALUES = [10, 10, 30.0, 12];
 
 // Create node1 to node20
 const NODES = Array.from({ length: 20 }, (_, i) => `node${i + 1}`);
