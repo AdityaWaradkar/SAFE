@@ -1,165 +1,121 @@
-import express from "express";
-import cors from "cors";
+import { useEffect, useRef } from "react";
 
-const app = express();
-
-/**
- * Use Render port if available, else default to 5000
- */
-const PORT = process.env.PORT || 5000;
+const INTERVAL = 5000;
 
 /**
- * Allow specific origins (adjust as needed)
+ * 🔥 ENDPOINTS
+ * Replace CLOUD_BASE with your actual Render URL
  */
-const allowedOrigins = [
-  "http://192.168.4.1",
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "https://safe-rho-ivory.vercel.app/", // <-- replace with your real frontend URL
-];
+const LAN_BASE = "http://192.168.4.1:5000/data";
+const CLOUD_BASE = "https://safe-0vvn.onrender.com/data";
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.warn("Blocked by CORS:", origin);
-        callback(new Error("Not allowed by CORS"));
+/**
+ * ---- STATIC METADATA ----
+ */
+const SYSTEM_ID = "SAFE-FLOOR-1";
+const FLOOR_ID = "floor-1";
+const SYSTEM_MODE = "ACTIVE";
+const ACTIVE_PATH_ID = "PATH-TEST-001";
+
+export default function useDataSender(state) {
+  const ref = useRef(state);
+
+  /**
+   * Always keep latest state in ref
+   */
+  useEffect(() => {
+    ref.current = state;
+  }, [state]);
+
+  /**
+   * Interval sender
+   */
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const snapshot = ref.current;
+
+      if (!snapshot || !snapshot.nodes) {
+        console.warn("No snapshot data available");
+        return;
       }
-    },
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type"],
-  }),
-);
 
-app.use(express.json());
+      const timestamp = new Date().toISOString();
 
-/**
- * ----------------------------------------
- * CONFIG
- * ----------------------------------------
- */
+      const totalPeople = calculateTotalPeople(snapshot);
 
-/**
- * Timeout (fail-safe)
- * If no update in 15 seconds, ESP still receives last known data
- */
-const DATA_TIMEOUT_MS = 15000;
+      const payload = {
+        systemId: SYSTEM_ID,
+        floorId: FLOOR_ID,
+        systemMode: SYSTEM_MODE,
+        timestamp,
+        source: {
+          deviceType: "ESP",
+          deviceId: "ESP-NODES-01",
+        },
+        occupancy: {
+          people_count_before_switching: totalPeople,
+          curr_people_count: "N/A",
+        },
+        activeEvacuationPathId: ACTIVE_PATH_ID,
+        nodes: mapNodes(snapshot.nodes),
+      };
 
-/**
- * ----------------------------------------
- * In-memory snapshot
- * ----------------------------------------
- */
-let nodesSnapshot = null;
-let lastUpdateTime = null;
+      console.log("Sending payload...");
 
-/**
- * Mark last update time
- */
-function markUpdated() {
-  lastUpdateTime = Date.now();
+      // 🔥 Critical path → LAN
+      send(`${LAN_BASE}/nodes`, payload);
+
+      // ☁️ Cloud monitoring
+      send(`${CLOUD_BASE}/nodes`, payload);
+    }, INTERVAL);
+
+    return () => clearInterval(timer);
+  }, []);
 }
 
 /**
- * Utility: Check timeout
+ * ---------------- HELPERS ----------------
  */
-function isTimedOut() {
-  if (!lastUpdateTime) return false;
-  return Date.now() - lastUpdateTime > DATA_TIMEOUT_MS;
+
+function calculateTotalPeople(snapshot) {
+  let total = 0;
+
+  for (const values of Object.values(snapshot.nodes)) {
+    total += values?.[3] || 0;
+  }
+
+  return total;
 }
 
-/**
- * ----------------------------------------
- * NODES ENDPOINT
- * ----------------------------------------
- */
+function mapNodes(nodes) {
+  return Object.fromEntries(
+    Object.entries(nodes).map(([key, values]) => [
+      key,
+      {
+        flame: values?.[0] ?? 0,
+        smoke: values?.[1] ?? 0,
+        temperature: values?.[2] ?? 0,
+        people_count: values?.[3] ?? 0,
+        curr_people_count: "N/A",
+      },
+    ]),
+  );
+}
 
-app.post("/data/nodes", (req, res) => {
+async function send(url, payload) {
   try {
-    nodesSnapshot = {
-      ...req.body,
-      receivedAt: new Date().toISOString(),
-    };
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-    markUpdated();
-
-    console.log(
-      `[${new Date().toISOString()}] Nodes updated | systemId: ${
-        req.body.systemId || "unknown"
-      }`,
-    );
-
-    res.status(200).json({ success: true });
+    if (!response.ok) {
+      console.error(`❌ Failed to send to ${url}`, response.status);
+    } else {
+      console.log(`✅ Sent successfully to ${url}`);
+    }
   } catch (err) {
-    console.error("Error updating nodes:", err);
-    res.status(500).json({ success: false });
+    console.error(`🚫 Endpoint unreachable: ${url}`, err.message);
   }
-});
-
-app.get("/data/nodes", (_req, res) => {
-  if (!nodesSnapshot) {
-    return res.json({ message: "No nodes data received yet" });
-  }
-
-  res.json(nodesSnapshot);
-});
-
-/**
- * ----------------------------------------
- * MERGED STATE (FOR ESP)
- * ----------------------------------------
- */
-
-app.get("/state", (_req, res) => {
-  if (isTimedOut()) {
-    console.warn(
-      `[${new Date().toISOString()}] ⚠ Data timeout — serving last known state`,
-    );
-  }
-
-  res.json({
-    nodes: nodesSnapshot,
-    timedOut: isTimedOut(),
-    lastUpdate: lastUpdateTime ? new Date(lastUpdateTime).toISOString() : null,
-  });
-});
-
-/**
- * ----------------------------------------
- * HEALTH CHECK
- * ----------------------------------------
- */
-
-app.get("/health", (_req, res) => {
-  res.json({
-    status: "ok",
-    hasData: !!nodesSnapshot,
-    timedOut: isTimedOut(),
-    lastUpdate: lastUpdateTime ? new Date(lastUpdateTime).toISOString() : null,
-    uptimeSeconds: process.uptime(),
-  });
-});
-
-/**
- * ----------------------------------------
- * GLOBAL ERROR HANDLER
- * ----------------------------------------
- */
-app.use((err, _req, res, _next) => {
-  console.error("Unhandled error:", err.message);
-  res.status(500).json({ error: "Internal Server Error" });
-});
-
-/**
- * ----------------------------------------
- * START SERVER
- * ----------------------------------------
- *
- * For LAN (RPi): binds to 0.0.0.0
- * For Render: host binding is ignored automatically
- */
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`SAFE backend running on port ${PORT}`);
-});
+}
