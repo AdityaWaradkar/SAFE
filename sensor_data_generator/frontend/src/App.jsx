@@ -5,46 +5,23 @@ import useDataSender from "./Hooks/useDataSender";
 
 const DEFAULT_VALUES = [50, 50, 70.0, 12];
 
-
-const ROOMS = ["room1", "room2", "room3", "room4", "room5", "safeRoom"];
-const CORRIDORS = [
-  "corridor1",
-  "corridor2",
-  "corridor3",
-  "corridor4",
-  "corridor5",
-  "corridor6",
-];
+// Create node1 to node20
+const NODES = Array.from({ length: 20 }, (_, i) => `node${i + 1}`);
 
 const INITIAL_STATE = {
-  rooms: Object.fromEntries(ROOMS.map((r) => [r, [...DEFAULT_VALUES]])),
-  corridors: Object.fromEntries(CORRIDORS.map((c) => [c, [...DEFAULT_VALUES]])),
-  conferenceRoom: {
-    A: [...DEFAULT_VALUES],
-    B: [...DEFAULT_VALUES],
-  },
+  nodes: Object.fromEntries(NODES.map((node) => [node, [...DEFAULT_VALUES]])),
 };
 
 export default function App() {
-  const [section, setSection] = useState("rooms");
-  const [activeEntity, setActiveEntity] = useState("room1");
+  const [activeNode, setActiveNode] = useState("node1");
   const [state, setState] = useState(INITIAL_STATE);
 
-  const currentValues =
-    section === "conferenceRoom"
-      ? state.conferenceRoom[activeEntity]
-      : state[section][activeEntity];
+  const currentValues = state.nodes[activeNode];
 
   const handleSliderChange = (index, value) => {
     setState((prev) => {
       const next = structuredClone(prev);
-
-      if (section === "conferenceRoom") {
-        next.conferenceRoom[activeEntity][index] = value;
-      } else {
-        next[section][activeEntity][index] = value;
-      }
-
+      next.nodes[activeNode][index] = value;
       return next;
     });
   };
@@ -57,53 +34,20 @@ export default function App() {
         {/* Header */}
         <header>
           <h1 className="text-3xl font-extrabold mb-1">
-            System Control Interface
+            Node Control Interface
           </h1>
           <p className="text-slate-500">
-            Real-time control and monitoring of system zones.
+            Real-time control and monitoring of sensor nodes.
           </p>
         </header>
 
-        {/* Section Selector */}
+        {/* Node Selector */}
         <Button
-          title="Sections"
-          items={["rooms", "corridors", "conferenceRoom"]}
-          active={section}
-          onSelect={(value) => {
-            setSection(value);
-            if (value === "rooms") setActiveEntity("room1");
-            if (value === "corridors") setActiveEntity("corridor1");
-            if (value === "conferenceRoom") setActiveEntity("A");
-          }}
+          title="Nodes"
+          items={NODES}
+          active={activeNode}
+          onSelect={setActiveNode}
         />
-
-        {/* Entity Selector */}
-        {section === "rooms" && (
-          <Button
-            title="Rooms"
-            items={ROOMS}
-            active={activeEntity}
-            onSelect={setActiveEntity}
-          />
-        )}
-
-        {section === "corridors" && (
-          <Button
-            title="Corridors"
-            items={CORRIDORS}
-            active={activeEntity}
-            onSelect={setActiveEntity}
-          />
-        )}
-
-        {section === "conferenceRoom" && (
-          <Button
-            title="Conference Room Channels"
-            items={["A", "B"]}
-            active={activeEntity}
-            onSelect={setActiveEntity}
-          />
-        )}
 
         {/* Sliders */}
         <Slider values={currentValues} onChange={handleSliderChange} />

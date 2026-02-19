@@ -2,113 +2,164 @@ import express from "express";
 import cors from "cors";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 /**
- * Allowed frontend origins (NO wildcards)
+ * Use Render port if available, else default to 5000
  */
-const ALLOWED_ORIGINS = [
+const PORT = process.env.PORT || 5000;
+
+/**
+ * Allow specific origins (adjust as needed)
+ */
+const allowedOrigins = [
+  "http://192.168.4.1",
   "http://localhost:5173",
-  "https://safe-rho-ivory.vercel.app",
+  "http://localhost:3000",
+  "https://safe-rho-ivory.vercel.app/", // <-- replace with your real frontend URL
 ];
 
-/**
- * CORS middleware (FIXED)
- */
 app.use(
   cors({
-    origin(origin, callback) {
-      // Allow non-browser clients (curl, server-to-server)
-      if (!origin) return callback(null, true);
-
-      if (ALLOWED_ORIGINS.includes(origin)) {
-        return callback(null, true);
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn("Blocked by CORS:", origin);
+        callback(new Error("Not allowed by CORS"));
       }
-
-      // IMPORTANT: do NOT throw error → just deny
-      return callback(null, false);
     },
     methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["Content-Type"],
-  })
+  }),
 );
 
 app.use(express.json());
 
 /**
- * In-memory snapshots
+ * ----------------------------------------
+ * CONFIG
+ * ----------------------------------------
  */
-let roomsSnapshot = null;
-let corridorsSnapshot = null;
-let conferenceSnapshot = null;
 
 /**
- * ROOMS
+ * Timeout (fail-safe)
+ * If no update in 15 seconds, ESP still receives last known data
  */
-app.post("/data/rooms", (req, res) => {
-  roomsSnapshot = {
-    ...req.body,
-    receivedAt: new Date().toISOString(),
-  };
+const DATA_TIMEOUT_MS = 15000;
 
-  res.status(200).json({ success: true });
+/**
+ * ----------------------------------------
+ * In-memory snapshot
+ * ----------------------------------------
+ */
+let nodesSnapshot = null;
+let lastUpdateTime = null;
+
+/**
+ * Mark last update time
+ */
+function markUpdated() {
+  lastUpdateTime = Date.now();
+}
+
+/**
+ * Utility: Check timeout
+ */
+function isTimedOut() {
+  if (!lastUpdateTime) return false;
+  return Date.now() - lastUpdateTime > DATA_TIMEOUT_MS;
+}
+
+/**
+ * ----------------------------------------
+ * NODES ENDPOINT
+ * ----------------------------------------
+ */
+
+app.post("/data/nodes", (req, res) => {
+  try {
+    nodesSnapshot = {
+      ...req.body,
+      receivedAt: new Date().toISOString(),
+    };
+
+    markUpdated();
+
+    console.log(
+      `[${new Date().toISOString()}] Nodes updated | systemId: ${
+        req.body.systemId || "unknown"
+      }`,
+    );
+
+    res.status(200).json({ success: true });
+  } catch (err) {
+    console.error("Error updating nodes:", err);
+    res.status(500).json({ success: false });
+  }
 });
 
-app.get("/data/rooms", (_req, res) => {
-  if (!roomsSnapshot) {
-    return res.json({ message: "No rooms data received yet" });
+app.get("/data/nodes", (_req, res) => {
+  if (!nodesSnapshot) {
+    return res.json({ message: "No nodes data received yet" });
   }
 
-  res.json(roomsSnapshot);
+  res.json(nodesSnapshot);
 });
 
 /**
- * CORRIDORS
+ * ----------------------------------------
+ * MERGED STATE (FOR ESP)
+ * ----------------------------------------
  */
-app.post("/data/corridors", (req, res) => {
-  corridorsSnapshot = {
-    ...req.body,
-    receivedAt: new Date().toISOString(),
-  };
 
-  res.status(200).json({ success: true });
-});
-
-app.get("/data/corridors", (_req, res) => {
-  if (!corridorsSnapshot) {
-    return res.json({ message: "No corridors data received yet" });
+app.get("/state", (_req, res) => {
+  if (isTimedOut()) {
+    console.warn(
+      `[${new Date().toISOString()}] ⚠ Data timeout — serving last known state`,
+    );
   }
 
-  res.json(corridorsSnapshot);
+  res.json({
+    nodes: nodesSnapshot,
+    timedOut: isTimedOut(),
+    lastUpdate: lastUpdateTime ? new Date(lastUpdateTime).toISOString() : null,
+  });
 });
 
 /**
- * CONFERENCE ROOM
+ * ----------------------------------------
+ * HEALTH CHECK
+ * ----------------------------------------
  */
-app.post("/data/conference", (req, res) => {
-  conferenceSnapshot = {
-    ...req.body,
-    receivedAt: new Date().toISOString(),
-  };
 
-  res.status(200).json({ success: true });
-});
-
-app.get("/data/conference", (_req, res) => {
-  if (!conferenceSnapshot) {
-    return res.json({ message: "No conference data received yet" });
-  }
-
-  res.json(conferenceSnapshot);
-});
-
-/**
- * Health check
- */
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok" });
+  res.json({
+    status: "ok",
+    hasData: !!nodesSnapshot,
+    timedOut: isTimedOut(),
+    lastUpdate: lastUpdateTime ? new Date(lastUpdateTime).toISOString() : null,
+    uptimeSeconds: process.uptime(),
+  });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+/**
+ * ----------------------------------------
+ * GLOBAL ERROR HANDLER
+ * ----------------------------------------
+ */
+app.use((err, _req, res, _next) => {
+  console.error("Unhandled error:", err.message);
+  res.status(500).json({ error: "Internal Server Error" });
+});
+
+/**
+ * ----------------------------------------
+ * START SERVER
+ * ----------------------------------------
+ *
+ * For LAN (RPi): binds to 0.0.0.0
+ * For Render: host binding is ignored automatically
+ */
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`SAFE backend running on port ${PORT}`);
 });
