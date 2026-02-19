@@ -15,7 +15,8 @@ const allowedOrigins = [
   "http://192.168.4.1",
   "http://localhost:5173",
   "http://localhost:3000",
-  "https://safe-rho-ivory.vercel.app/", // <-- replace with your real frontend URL
+  "https://safe-rho-ivory.vercel.app", 
+  // <-- replace with your real frontend URL
 ];
 
 app.use(
