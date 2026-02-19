@@ -6,7 +6,7 @@ const INTERVAL = 5000;
  * 🔥 ENDPOINTS
  * Replace CLOUD_BASE with your actual Render URL
  */
-const LAN_BASE = "http://192.168.4.1:5000/data";
+const LAN_BASE = "http://192.168.4.1:8080/data";
 const CLOUD_BASE = "https://safe-0vvn.onrender.com/data";
 
 /**
