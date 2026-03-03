@@ -14,8 +14,9 @@ const PORT = process.env.PORT || 5000;
 const allowedOrigins = [
   "http://192.168.4.1",
   "http://localhost:5173",
+  "http://localhost:5174",
   "http://localhost:3000",
-  "https://safe-rho-ivory.vercel.app", 
+  "https://safe-rho-ivory.vercel.app",
   // <-- replace with your real frontend URL
 ];
 

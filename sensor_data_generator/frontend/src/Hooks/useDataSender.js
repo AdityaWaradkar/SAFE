@@ -4,9 +4,9 @@ const INTERVAL = 5000;
 
 /**
  * 🔥 ENDPOINTS
- * Replace CLOUD_BASE with your actual Render URL
  */
 const LAN_BASE = "http://192.168.4.1:8080/data";
+const LOCAL_API_BASE = "http://localhost:5000/data";
 const CLOUD_BASE = "https://safe-0vvn.onrender.com/data";
 
 /**
@@ -40,7 +40,6 @@ export default function useDataSender(state) {
       }
 
       const timestamp = new Date().toISOString();
-
       const totalPeople = calculateTotalPeople(snapshot);
 
       const payload = {
@@ -64,6 +63,9 @@ export default function useDataSender(state) {
 
       // 🔥 Critical path → LAN
       send(`${LAN_BASE}/nodes`, payload);
+
+      // 🖥 Local backend (Raspberry Pi / Local Flask)
+      send(`${LOCAL_API_BASE}/nodes`, payload);
 
       // ☁️ Cloud monitoring
       send(`${CLOUD_BASE}/nodes`, payload);
