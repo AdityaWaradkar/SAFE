@@ -1,108 +1,115 @@
 # =========================
-
 # Node.js
-
 # =========================
-
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
 
 # =========================
-
 # Python
-
 # =========================
-
-**pycache**/
+__pycache__/
 *.py[cod]
 *$py.class
 *.pyo
 *.pyd
+*.so
 
 # Python virtual environments
-
 venv/
 .env/
 .venv/
+env/
+ENV/
 
 # =========================
-
 # Environment variables
-
 # =========================
-
 .env
 .env.*
 !.env.example
+!.env.local
+!.env.lan
+!.env.cloud
 
 # =========================
-
 # Frontend builds (Vite / React)
-
 # =========================
-
 dist/
 build/
 .vite/
+*.result.json
 
 # =========================
-
 # Backend runtime / temp
-
 # =========================
-
 coverage/
 .tmp/
 tmp/
+*.db
+*.sqlite
+*.sqlite3
 
 # =========================
-
 # Logs
-
 # =========================
-
 logs/
 *.log
 
 # =========================
-
 # OS / Editor files
-
 # =========================
-
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # VS Code
-
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json.example
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
 
 # =========================
-
 # Terraform (DevOps)
-
 # =========================
-
 .terraform/
 *.tfstate
 *.tfstate.*
 crash.log
+*.tfvars
 
 # =========================
-
 # Docker
-
 # =========================
-
 docker-compose.override.yml
+*.pid
 
 # =========================
-
 # Git
+# =========================
+.gitmodules
 
 # =========================
+# Project specific
+# =========================
+# Backup files
+*.bak
+*.backup
 
-.gitmodules
+# Test outputs
+test-results/
+junit.xml
+
+# Memory dumps
+*.dump
+*.heapdump

@@ -1,6 +1,8 @@
 import time
 import threading
+
 from flask import Flask, jsonify
+from flask_cors import CORS
 
 from config import ROOM_NODES, GOAL_NODES, SIZE, INTERVAL, API_PORT
 from graph_loader import load_graph
@@ -79,6 +81,17 @@ def algorithm_loop():
 
 # Flask API server
 app = Flask(__name__)
+
+# Enable CORS for SAFE dashboard
+CORS(
+    app,
+    resources={r"/*": {"origins": [
+        "http://localhost:5143",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "https://safe-rho-ivory.vercel.app"
+    ]}}
+)
 
 
 # Endpoint returning latest computed paths
