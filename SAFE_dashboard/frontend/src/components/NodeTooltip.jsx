@@ -1,6 +1,28 @@
 import { Flame, Wind, Thermometer, Users } from "lucide-react";
 
 export default function NodeTooltip({ nodeId, data, position }) {
+  // Handle case when data is null or undefined
+  if (!data || !Array.isArray(data) || data.length < 4) {
+    return (
+      <div
+        className="absolute z-50 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 p-3 min-w-[180px] pointer-events-none"
+        style={{
+          left: position.x,
+          top: position.y,
+          transform: "translate(-50%, -100%)",
+        }}
+      >
+        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 rotate-45 w-2 h-2 bg-white dark:bg-slate-800 border-r border-b border-slate-200 dark:border-slate-700" />
+        <div className="text-xs font-semibold mb-2 text-slate-900 dark:text-slate-100">
+          {nodeId}
+        </div>
+        <div className="text-xs text-slate-500 dark:text-slate-400">
+          No sensor data available
+        </div>
+      </div>
+    );
+  }
+
   const [flame, smoke, temperature, people] = data;
 
   const getStatusColor = (value, type) => {

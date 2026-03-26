@@ -21,24 +21,38 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(true);
   const [telemetry, setTelemetry] = useState(null);
   const [paths, setPaths] = useState(null);
+  const [pathMetrics, setPathMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeAlerts, setActiveAlerts] = useState(0);
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
+  const [aStarStatus, setAStarStatus] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Fetch sensor data
         const sensorRes = await fetch("http://localhost:5000/data/nodes");
         const sensorData = await sensorRes.json();
 
+        // Fetch paths from A*
         const pathRes = await fetch("http://localhost:7000/paths");
         const pathData = await pathRes.json();
 
+        // Fetch path metrics
+        const metricsRes = await fetch("http://localhost:7000/paths/metrics");
+        const metricsData = await metricsRes.json();
+
+        // Fetch A* system status
+        const statusRes = await fetch("http://localhost:7000/status");
+        const statusData = await statusRes.json();
+
         setTelemetry(sensorData);
         setPaths(pathData);
+        setPathMetrics(metricsData);
+        setAStarStatus(statusData);
         setLastUpdateTime(new Date());
 
-        // Calculate active alerts
+        // Calculate active alerts based on sensor data
         if (sensorData?.nodes) {
           const alerts = Object.values(sensorData.nodes).filter(
             (values) => values[0] > 0 || values[1] > 30 || values[2] > 45,
@@ -47,6 +61,7 @@ export default function App() {
         }
       } catch (err) {
         // Silently handle errors
+        console.log("Error fetching data:", err);
       } finally {
         setLoading(false);
       }
@@ -78,6 +93,11 @@ export default function App() {
   ).length;
 
   const safeNodes = Object.keys(telemetry?.nodes || {}).length - criticalNodes;
+
+  // Calculate active paths count (non-null paths)
+  const activePathsCount = Object.values(paths || {}).filter(
+    (path) => Array.isArray(path) && path.length > 0,
+  ).length;
 
   if (loading) {
     return (
@@ -147,11 +167,30 @@ export default function App() {
                 Last update: {lastUpdateTime?.toLocaleTimeString() || "N/A"}
               </span>
             </div>
+            {aStarStatus?.last_trigger && (
+              <>
+                <div className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
+                <div className="flex items-center gap-1 text-xs text-slate-500">
+                  <Activity size={12} />
+                  <span>
+                    A*:{" "}
+                    {aStarStatus.last_trigger === "sensor_change"
+                      ? "Event-driven"
+                      : "Periodic"}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
               {Object.keys(telemetry?.nodes || {}).length} Sensors Active
             </span>
+            {aStarStatus && (
+              <span className="text-xs px-2 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+                {aStarStatus.active_paths || 0} Active Paths
+              </span>
+            )}
           </div>
         </div>
 
@@ -322,13 +361,13 @@ export default function App() {
               </div>
               <div className="space-y-1">
                 <h3 className="text-3xl font-bold text-slate-900 dark:text-white">
-                  {Object.keys(paths || {}).length}
+                  {activePathsCount}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                   <span>Evacuation Paths</span>
                   <ChevronRight size={12} className="text-slate-400" />
                   <span className="text-slate-600 dark:text-slate-300">
-                    ready
+                    {activePathsCount === 1 ? "ready" : "ready"}
                   </span>
                 </p>
               </div>
@@ -401,7 +440,11 @@ export default function App() {
                   margin: 0,
                 }}
               >
-                <PhysicalLayout paths={paths} nodes={telemetry} />
+                <PhysicalLayout
+                  paths={paths}
+                  nodes={telemetry}
+                  pathMetrics={pathMetrics}
+                />
 
                 {/* Map overlay indicators */}
                 <div className="absolute bottom-3 right-3 flex gap-2 z-20">
@@ -429,6 +472,8 @@ export default function App() {
                 systemMode={telemetry?.systemMode}
                 activeAlerts={activeAlerts}
                 paths={paths}
+                pathMetrics={pathMetrics}
+                aStarStatus={aStarStatus}
               />
             </div>
           </div>
