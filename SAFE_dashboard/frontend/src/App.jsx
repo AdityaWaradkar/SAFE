@@ -34,7 +34,7 @@ export default function App() {
         const sensorRes = await fetch("http://localhost:5000/data/nodes");
         const sensorData = await sensorRes.json();
 
-        // Fetch paths from A*
+        // Fetch paths from A* - NEW DATA FORMAT
         const pathRes = await fetch("http://localhost:7000/paths");
         const pathData = await pathRes.json();
 
@@ -60,7 +60,6 @@ export default function App() {
           setActiveAlerts(alerts);
         }
       } catch (err) {
-        // Silently handle errors
         console.log("Error fetching data:", err);
       } finally {
         setLoading(false);
@@ -94,16 +93,17 @@ export default function App() {
 
   const safeNodes = Object.keys(telemetry?.nodes || {}).length - criticalNodes;
 
-  // Calculate active paths count (non-null paths)
-  const activePathsCount = Object.values(paths || {}).filter(
-    (path) => Array.isArray(path) && path.length > 0,
+  // Calculate active paths count - FIXED for new data format
+  // Paths are now inside paths.paths object, each path has node_path array
+  const activePathsCount = Object.values(paths?.paths || {}).filter(
+    (pathData) =>
+      pathData && pathData.node_path && pathData.node_path.length > 0,
   ).length;
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
         <div className="text-center space-y-6">
-          {/* Animated SAFE logo */}
           <div className="relative">
             <div className="w-24 h-24 mx-auto relative">
               <div className="absolute inset-0 rounded-full border-4 border-blue-500/30 animate-ping" />
@@ -121,7 +121,6 @@ export default function App() {
             </p>
           </div>
 
-          {/* Loading progress bar */}
           <div className="w-64 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden mx-auto">
             <div
               className="h-full bg-blue-500 rounded-full animate-[loading_1.5s_ease-in-out_infinite]"
@@ -138,9 +137,7 @@ export default function App() {
       className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 
       dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 transition-colors duration-300"
     >
-      {/* Main container with max width and padding */}
       <div className="max-w-[1600px] mx-auto p-4 md:p-6 space-y-6">
-        {/* Header Section */}
         <DashboardHeader
           darkMode={darkMode}
           setDarkMode={setDarkMode}
@@ -194,7 +191,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Summary Cards Grid - 4 cards in a row on large screens */}
+        {/* Summary Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Total People Card */}
           <div
@@ -375,9 +372,9 @@ export default function App() {
           </div>
         </div>
 
-        {/* Main Content Grid - 2 columns */}
+        {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column - Live Sensors Panel (4 columns) */}
+          {/* Left Column - Live Sensors Panel */}
           <div className="lg:col-span-4 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
@@ -390,7 +387,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Scrollable Sensors Panel */}
             <div className="relative">
               <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-white dark:from-slate-900 to-transparent pointer-events-none z-10" />
               <div className="max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
@@ -400,9 +396,8 @@ export default function App() {
             </div>
           </div>
 
-          {/* Right Column - Map and Logs (8 columns) */}
+          {/* Right Column - Map and Logs */}
           <div className="lg:col-span-8 space-y-6">
-            {/* Physical Layout/Map Section */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
@@ -431,7 +426,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Map Container - Fixed height with no extra spacing */}
               <div
                 className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white shadow-lg"
                 style={{
@@ -441,12 +435,11 @@ export default function App() {
                 }}
               >
                 <PhysicalLayout
-                  paths={paths}
+                  paths={paths?.paths} // Pass the inner paths object
                   nodes={telemetry}
                   pathMetrics={pathMetrics}
                 />
 
-                {/* Map overlay indicators */}
                 <div className="absolute bottom-3 right-3 flex gap-2 z-20">
                   <div className="px-2 py-1 rounded-lg bg-black/50 backdrop-blur-sm text-white text-xs">
                     Live View
@@ -455,7 +448,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* System Logs Section */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
@@ -471,7 +463,7 @@ export default function App() {
                 timestamp={telemetry?.timestamp}
                 systemMode={telemetry?.systemMode}
                 activeAlerts={activeAlerts}
-                paths={paths}
+                paths={paths?.paths} // Pass the inner paths object
                 pathMetrics={pathMetrics}
                 aStarStatus={aStarStatus}
               />
@@ -494,7 +486,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* Global Scrollbar Styles */}
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;

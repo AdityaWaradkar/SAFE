@@ -16,12 +16,14 @@ export default function SystemLogs({
   systemMode,
   activeAlerts = 0,
   paths = {},
+  pathMetrics = {},
+  aStarStatus = null,
 }) {
   const [logs, setLogs] = useState([]);
   const [autoScroll, setAutoScroll] = useState(true);
   const [expandedPath, setExpandedPath] = useState(null);
 
-  // Memoize path statistics with null checks
+  // Memoize path statistics with null checks - UPDATED for new format
   const pathStats = useMemo(() => {
     if (
       !paths ||
@@ -31,16 +33,19 @@ export default function SystemLogs({
       return { total: 0, longest: 0, shortest: 0 };
     }
 
-    // Filter out null paths and get valid arrays
+    // Filter valid paths (those with node_path array)
     const validPaths = Object.values(paths).filter(
-      (path) => Array.isArray(path) && path.length > 0,
+      (pathData) =>
+        pathData &&
+        Array.isArray(pathData.node_path) &&
+        pathData.node_path.length > 0,
     );
 
     if (validPaths.length === 0) {
       return { total: 0, longest: 0, shortest: 0 };
     }
 
-    const pathLengths = validPaths.map((path) => path.length);
+    const pathLengths = validPaths.map((pathData) => pathData.node_path.length);
     return {
       total: validPaths.length,
       longest: Math.max(...pathLengths),
@@ -85,10 +90,13 @@ export default function SystemLogs({
       });
     }
 
-    // Add path calculation logs with null checks
+    // Add path calculation logs with new format
     if (paths && typeof paths === "object") {
       const validPathCount = Object.values(paths).filter(
-        (path) => Array.isArray(path) && path.length > 0,
+        (pathData) =>
+          pathData &&
+          Array.isArray(pathData.node_path) &&
+          pathData.node_path.length > 0,
       ).length;
 
       if (validPathCount > 0) {
@@ -101,19 +109,23 @@ export default function SystemLogs({
 
         // Add log for each valid source node (limit to 5)
         let counter = 0;
-        Object.entries(paths).forEach(([sourceNode, path], idx) => {
-          if (Array.isArray(path) && path.length > 0 && counter < 5) {
+        Object.entries(paths).forEach(([sourceNode, pathData], idx) => {
+          if (
+            pathData &&
+            Array.isArray(pathData.node_path) &&
+            pathData.node_path.length > 0 &&
+            counter < 5
+          ) {
             newLogs.push({
               id: Date.now() - 400 + idx,
               time: new Date().toLocaleTimeString(),
-              message: `Path found from ${sourceNode} to ${path[path.length - 1]} (${path.length} nodes)`,
+              message: `Path found from ${sourceNode} to ${pathData.node_path[pathData.node_path.length - 1]} (${pathData.node_path.length} nodes)`,
               type: "info",
             });
             counter++;
           }
         });
 
-        // If there are more than 5 valid paths, add a summary
         if (validPathCount > 5) {
           newLogs.push({
             id: Date.now() - 350,
@@ -160,13 +172,21 @@ export default function SystemLogs({
     }
   };
 
-  // Render path visualization with null checks
-  const renderPathVisualization = (path, index, sourceNode) => {
-    if (!Array.isArray(path) || path.length < 2) return null;
+  // Render path visualization with new format
+  const renderPathVisualization = (pathData, index, sourceNode) => {
+    if (
+      !pathData ||
+      !Array.isArray(pathData.node_path) ||
+      pathData.node_path.length < 2
+    )
+      return null;
 
-    const startNode = path[0];
-    const endNode = path[path.length - 1];
-    const pathLength = path.length;
+    const nodePath = pathData.node_path;
+    const corridorPath = pathData.corridor_path;
+    const goalType = pathData.goal_type;
+    const startNode = nodePath[0];
+    const endNode = nodePath[nodePath.length - 1];
+    const pathLength = nodePath.length;
 
     return (
       <div
@@ -180,6 +200,11 @@ export default function SystemLogs({
             <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
               Evacuation Path from {sourceNode}
             </span>
+            {goalType === "primary" && (
+              <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
+                Primary Goal
+              </span>
+            )}
           </div>
           <button
             onClick={() =>
@@ -218,7 +243,7 @@ export default function SystemLogs({
 
         {/* Path visualization */}
         <div className="flex items-center flex-wrap gap-1 mt-2">
-          {path.map((node, idx) => (
+          {nodePath.map((node, idx) => (
             <div key={idx} className="flex items-center">
               <div
                 className={`
@@ -226,7 +251,7 @@ export default function SystemLogs({
                 ${
                   idx === 0
                     ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
-                    : idx === path.length - 1
+                    : idx === nodePath.length - 1
                       ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
                       : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                 }
@@ -234,12 +259,20 @@ export default function SystemLogs({
               >
                 {node}
               </div>
-              {idx < path.length - 1 && (
+              {idx < nodePath.length - 1 && (
                 <ArrowRight size={12} className="mx-1 text-slate-400" />
               )}
             </div>
           ))}
         </div>
+
+        {/* Corridor path (if available) */}
+        {corridorPath && corridorPath.length > 0 && (
+          <div className="mt-2 text-xs text-slate-500">
+            <span>Corridors: </span>
+            <span className="font-mono">{corridorPath.join(" → ")}</span>
+          </div>
+        )}
 
         {/* Expanded details */}
         {expandedPath === index && (
@@ -250,21 +283,46 @@ export default function SystemLogs({
                 <div className="font-medium">{pathLength - 1} connections</div>
               </div>
               <div className="p-2 bg-white dark:bg-slate-900 rounded">
-                <div className="text-slate-500 mb-1">Exit Reachable</div>
-                <div className="font-medium text-emerald-600">Yes</div>
+                <div className="text-slate-500 mb-1">Goal Type</div>
+                <div
+                  className={`font-medium ${goalType === "primary" ? "text-emerald-600" : "text-orange-600"}`}
+                >
+                  {goalType === "primary" ? "Exit/Safe Room" : "Shelter Only"}
+                </div>
               </div>
             </div>
+
+            {/* Path metrics from A* */}
+            {pathMetrics?.metrics?.[sourceNode] && (
+              <div className="p-2 bg-white dark:bg-slate-900 rounded">
+                <div className="text-slate-500 mb-1">A* Metrics</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-slate-400">Total Risk:</span>
+                    <span className="ml-1 font-medium">
+                      {pathMetrics.metrics[sourceNode].total_risk}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Max Occupancy:</span>
+                    <span className="ml-1 font-medium">
+                      {pathMetrics.metrics[sourceNode].max_occupancy}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Path edges */}
             <div className="text-xs">
               <div className="text-slate-500 mb-1">Path edges:</div>
               <div className="flex flex-wrap gap-2">
-                {path.slice(0, -1).map((node, idx) => (
+                {nodePath.slice(0, -1).map((node, idx) => (
                   <span
                     key={idx}
                     className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded"
                   >
-                    {node} → {path[idx + 1]}
+                    {node} → {nodePath[idx + 1]}
                   </span>
                 ))}
               </div>
@@ -287,7 +345,6 @@ export default function SystemLogs({
             </h3>
           </div>
           <div className="flex items-center gap-3">
-            {/* Auto-scroll toggle */}
             <button
               onClick={() => setAutoScroll(!autoScroll)}
               className={`text-xs px-2 py-1 rounded transition-colors ${
@@ -299,7 +356,6 @@ export default function SystemLogs({
               Auto-scroll {autoScroll ? "ON" : "OFF"}
             </button>
 
-            {/* Status indicator */}
             <div className="flex items-center gap-1">
               <div
                 className={`w-2 h-2 rounded-full ${
@@ -324,7 +380,6 @@ export default function SystemLogs({
             </span>
           </div>
 
-          {/* Path statistics badges */}
           {pathStats.total > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
               <div className="flex items-center gap-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-1 rounded">
@@ -379,7 +434,7 @@ export default function SystemLogs({
           </div>
         ))}
 
-        {/* Path visualizations section */}
+        {/* Path visualizations section - UPDATED for new format */}
         {paths &&
           typeof paths === "object" &&
           Object.keys(paths).length > 0 && (
@@ -392,9 +447,13 @@ export default function SystemLogs({
               </div>
 
               {/* Render all valid paths */}
-              {Object.entries(paths).map(([sourceNode, path], index) => {
-                if (Array.isArray(path) && path.length > 0) {
-                  return renderPathVisualization(path, index, sourceNode);
+              {Object.entries(paths).map(([sourceNode, pathData], index) => {
+                if (
+                  pathData &&
+                  Array.isArray(pathData.node_path) &&
+                  pathData.node_path.length > 0
+                ) {
+                  return renderPathVisualization(pathData, index, sourceNode);
                 }
                 return null;
               })}
@@ -436,7 +495,8 @@ export default function SystemLogs({
               <span className="text-slate-500">
                 {
                   Object.values(paths).filter(
-                    (p) => Array.isArray(p) && p.length > 0,
+                    (p) =>
+                      p && Array.isArray(p.node_path) && p.node_path.length > 0,
                   ).length
                 }{" "}
                 active paths

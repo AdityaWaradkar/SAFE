@@ -24,4 +24,6 @@ export const CORRIDOR_MAPPING = {
   "N_7-N_6": "C5", // Path between nodes 7 and 6 also uses corridor C5
   "N_12-N_17": "C16", // Path between nodes 12 and 17 uses corridor C16
   "N_18-N_16": "C19", // Path between nodes 18 and 16 also uses corridor C16
+  "N_12-N_9": "C11", // Path between nodes 12 and 9 also uses corridor C19
+  "N_9-N_10": "C8", // Path between nodes 12 and 9 also uses corridor C19
 };
