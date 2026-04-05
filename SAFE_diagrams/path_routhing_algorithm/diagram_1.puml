@@ -1,0 +1,55 @@
+@startuml
+skinparam handwritten false
+skinparam monochrome false
+skinparam defaultFontName "Times New Roman"
+skinparam shadowing false
+
+title Fig. 1: System Architecture for Dynamic Risk-Aware Evacuation
+
+rectangle "Sensor Layer" {
+  (Flame) as F
+  (Smoke) as S
+  (Temperature) as T
+  (Occupancy) as O
+}
+
+rectangle "Processing Layer" {
+  node "Data Fusion & Change Detection" as DF
+  node "Risk Calculator" as RC
+  node "Occupancy Analyzer" as OA
+}
+
+rectangle "Decision Layer" {
+  node "Dynamic Goal Selector\n(Primary → Secondary Fallback)" as GS
+  node "Risk-Aware A* Planner" as AP
+  node "Path Prioritization" as PP
+}
+
+rectangle "Output Layer" {
+  node "Evacuation Routes" as ER
+  node "Dashboard" as DB
+}
+
+F --> DF
+S --> DF
+T --> DF
+O --> DF
+DF --> RC
+DF --> OA
+RC --> GS
+OA --> GS
+GS --> AP
+AP --> PP
+PP --> ER
+ER --> DB
+
+note bottom of GS
+  Primary: Exits, Safe Rooms
+  Secondary: Conference Rooms, Rooms
+end note
+
+note bottom of AP
+  Cost = Distance + Avg(Risk) + Occupancy_Penalty
+end note
+
+@enduml

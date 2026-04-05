@@ -1,0 +1,67 @@
+@startuml
+skinparam handwritten false
+skinparam monochrome false
+skinparam defaultFontName "Times New Roman"
+skinparam shadowing false
+
+title Fig. 4: Risk-Aware Path Routing Algorithm
+
+start
+
+:Get Source Node and Available Goals;
+
+:Initialize routing structures;
+
+while (Nodes remain to explore?)
+  :Select best candidate node
+  (lowest estimated route cost);
+  
+  if (Node is a valid destination?) then (yes)
+    :Build route by tracing back;
+    break;
+  else (no)
+    :Mark node as processed;
+    :Examine all connected nodes;
+  endif
+  
+  while (More neighbors to check?)
+    if (Neighbor already processed?) then (yes)
+      :Skip;
+    else (no)
+      if (Neighbor is hazardous?) then (yes)
+        :Skip;
+      else (no)
+        :Compute edge cost =
+        Distance + Avg(Risk) + 0.5×Occupancy;
+        
+        :Calculate new route cost;
+        
+        if (New cost is better?) then (yes)
+          :Update route cost;
+          :Update estimates;
+          :Record path;
+          :Add to candidate set;
+        else (no)
+          :Discard;
+        endif
+      endif
+    endif
+  endwhile
+endwhile
+
+if (Route Found?) then (yes)
+  :Store Route with Metrics;
+else (no)
+  :Mark as "No Available Route";
+endif
+
+:Return Routing Result;
+
+note right
+  <b>Hazard thresholds:</b>
+  Flame > 20% | Smoke > 50% | Temp > 60°C
+  
+  <b>Occupancy Penalty = 0.5</b>
+end note
+
+@enduml

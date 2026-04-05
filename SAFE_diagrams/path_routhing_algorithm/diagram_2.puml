@@ -1,0 +1,55 @@
+@startuml
+skinparam handwritten false
+skinparam monochrome false
+skinparam defaultFontName Times New Roman
+skinparam shadowing false
+
+title Fig. 2: Main Algorithm Execution Flow
+
+start
+
+:Initialize Building Graph & Node Types;
+
+if (System Mode = Active?) then (no)
+  :System Idle;
+  stop
+else (yes)
+
+  repeat
+    :Collect Sensor Data
+    (Flame, Smoke, Temp, Occupancy);
+    
+    if (Hazard or Occupancy Changed?) then (no)
+      :Keep Existing Paths;
+    else (yes)
+      
+      :Update Risk Values for All Nodes;
+      
+      :Select Available Goals
+      (See Fig. 3);
+      
+      if (No Safe Goal Available?) then (yes)
+        :Trigger Emergency Alert;
+      else (no)
+        
+        :Prioritize Sources by Occupancy
+        (High occupancy first);
+        
+        :Run Risk-Aware A* for Each Source
+        (See Fig. 4);
+        
+        :Filter & Validate Paths;
+        
+        :Publish Routes to Dashboard;
+      endif
+    endif
+    
+    :Wait [INTERVAL] seconds;
+    
+  repeat while (System Active)
+  
+endif
+
+stop
+
+@enduml

@@ -1,0 +1,68 @@
+@startuml
+skinparam handwritten false
+skinparam monochrome false
+skinparam defaultFontName Times New Roman
+skinparam shadowing false
+
+title Fig. 6: Source Prioritization and Path Validation
+
+start
+
+:Get All Source Nodes
+(All Occupied Rooms);
+
+:Calculate Priority Score for Each Source:
+
+Priority = (Occupancy × 0.7) + (Node Risk × 0.3);
+
+:Sort Sources by Priority
+(Highest Occupancy + Highest Risk First);
+
+repeat
+  :Select Next Source
+  (Highest Priority First);
+  
+  :Run A* Pathfinding
+  (See Fig. 4);
+  
+  if (Path Found?) then (yes)
+    
+    if (Goal is Primary Type?) then (yes)
+      :Accept Path;
+      :Store in Final Results;
+      :Log: "✓ Evacuation Route";
+    else (no)
+      :Mark as "Shelter Only";
+      :Log: "⚠ Temporary Shelter";
+    endif
+    
+  else (no)
+    :Mark as "No Route Available";
+    :Log: "✗ Cannot Evacuate";
+  endif
+  
+repeat while (More Source Nodes?)
+
+:Compile All Results;
+
+:Publish to API Endpoints;
+
+:Update Dashboard with:
+- Colored Routes (Green/Yellow/Red)
+- Occupancy Heatmap
+- Risk Indicators;
+
+stop
+
+note right
+  Prioritization Rationale:
+  • High occupancy rooms
+    evacuated first
+    (more lives at risk)
+    
+  • High risk rooms
+    prioritized due to
+    deteriorating conditions
+end note
+
+@enduml

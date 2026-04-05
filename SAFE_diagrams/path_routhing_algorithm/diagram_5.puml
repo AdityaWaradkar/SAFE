@@ -1,0 +1,55 @@
+@startuml
+skinparam handwritten false
+skinparam monochrome false
+skinparam defaultFontName Times New Roman
+skinparam shadowing false
+
+title Fig. 5: Integrated Risk-Occupancy Model
+
+start
+
+:Get Node Sensor Data;
+
+fork
+  :Environmental Risk;
+fork again
+  :Occupancy Factor;
+end fork
+
+if (Flame > 60% OR Smoke > 70% OR Temp > 80°C?) then (yes)
+  :Node Risk = ∞ (Impassable);
+  stop
+else (no)
+  
+  :Environmental Risk =
+  1.2×Smoke + 1.8×max(0, Temp-40) + 4.0×Flame;
+  
+  :Occupancy Ratio = People_Count / Room_Capacity;
+  
+  if (Occupancy Ratio > 0.8?) then (yes)
+    :Occupancy Factor = 0.8;
+  else if (Occupancy Ratio > 0.5?) then (yes)
+    :Occupancy Factor = 0.5;
+  else (no)
+    :Occupancy Factor = 0.2;
+  endif
+  
+  :Total Node Cost = Environmental Risk + Occupancy Factor;
+  
+endif
+
+:Edge Cost = Distance + (Cost_u + Cost_v)/2;
+
+:Output Cost for Path Planning;
+
+note right
+  Risk Weights:
+  • Flame: 4.0 (highest)
+  • Temperature: 1.8
+  • Smoke: 1.2
+  
+  Occupancy encourages
+  avoiding crowded areas
+end note
+
+@enduml

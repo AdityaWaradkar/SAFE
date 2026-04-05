@@ -1,0 +1,65 @@
+@startuml
+skinparam handwritten false
+skinparam monochrome false
+skinparam defaultFontName Times New Roman
+skinparam shadowing false
+
+title Fig. 3: Dynamic Goal Selection Strategy
+
+start
+
+:Get Current Sensor Data
+(Hazards + Occupancy);
+
+partition "Primary Goals (Exits & Safe Rooms)" {
+  repeat
+    :Check Next Primary Goal;
+    
+    if (Hazards Below Threshold?) then (yes)
+      if (Occupancy < Capacity?) then (yes)
+        :Add to Available Set;
+      else (no)
+        :Mark as Congested;
+      endif
+    else (no)
+      :Mark as Hazardous;
+    endif
+  repeat while (More Primary Goals?)
+}
+
+if (Available Set Not Empty?) then (yes)
+  :Use Primary Goals;
+  note right: Optimal: Evacuate to Exits/Safe Rooms
+else (no)
+  
+  partition "Secondary Goals (Rooms & Conference Rooms)" {
+    repeat
+      :Check Next Secondary Goal;
+      
+      if (Hazards Below Threshold?) then (yes)
+        if (Occupancy < Capacity?) then (yes)
+          :Add to Available Set;
+        else (no)
+          :Mark as Full;
+        endif
+      else (no)
+        :Mark as Hazardous;
+      endif
+    repeat while (More Secondary Goals?)
+  }
+  
+  if (Available Set Not Empty?) then (yes)
+    :Use Secondary Goals;
+    note right: Fallback: Shelter in Safe Rooms
+  else (no)
+    :No Safe Goal Available;
+    :Trigger Emergency Alert;
+    stop
+  endif
+endif
+
+:Output Available Goal Set;
+
+stop
+
+@enduml
